@@ -27,9 +27,21 @@ export class DeleteDialog {
 
   readonly reassignTo = signal<number | null>(null);
 
+  /** Managers get a two-step flow: choose a new manager, then confirm the summary. */
+  readonly step = signal<'choose' | 'confirm'>('choose');
+
   readonly subordinates = computed(() =>
     this.allEmployees().filter(e => e.managerId === this.employee().id)
   );
+
+  readonly reassignToName = computed(() => {
+    const id = this.reassignTo();
+    if (id === null) {
+      return null;
+    }
+    const target = this.allEmployees().find(e => e.id === id);
+    return target ? `${target.firstName} ${target.lastName}`.trim() : null;
+  });
 
   readonly reassignOptions = computed<SelectOption[]>(() => {
     const deletedId = this.employee().id;
@@ -52,8 +64,19 @@ export class DeleteDialog {
   confirm(): void {
     if (this.subordinates().length === 0) {
       this.confirmed.emit(null);
-    } else {
-      this.confirmed.emit(this.reassignTo() ?? 'none');
+      return;
+    }
+    if (this.step() === 'choose') {
+      // First step only picks the new manager; the summary must be confirmed.
+      this.step.set('confirm');
+      return;
+    }
+    this.confirmed.emit(this.reassignTo() ?? 'none');
+  }
+
+  back(): void {
+    if (!this.busy()) {
+      this.step.set('choose');
     }
   }
 }

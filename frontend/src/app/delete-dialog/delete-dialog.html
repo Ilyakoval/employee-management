@@ -1,7 +1,7 @@
 <div class="overlay" (click)="closed.emit()">
   <div class="dialog dialog-sm" role="alertdialog" aria-modal="true" appFocusTrap (click)="$event.stopPropagation()">
     <header class="dialog-header">
-      <h2>Delete employee</h2>
+      <h2>{{ step() === 'confirm' ? 'Confirm deletion' : 'Delete employee' }}</h2>
       <button type="button" class="icon-btn" aria-label="Close" (click)="closed.emit()">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
           <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
@@ -10,7 +10,12 @@
     </header>
 
     <div class="dialog-body">
-      @if (subordinates().length > 0) {
+      @if (subordinates().length === 0) {
+        <p>
+          Are you sure you want to delete <strong>{{ fullName() }}</strong>?
+          This action cannot be undone.
+        </p>
+      } @else if (step() === 'choose') {
         <p>
           <strong>{{ fullName() }}</strong> manages
           <strong>{{ subordinates().length }}</strong>
@@ -29,9 +34,16 @@
         </div>
       } @else {
         <p>
-          Are you sure you want to delete <strong>{{ fullName() }}</strong>?
-          This action cannot be undone.
+          You are about to delete manager <strong>{{ fullName() }}</strong>
+          @if (reassignToName(); as name) {
+            and reassign {{ subordinates().length === 1 ? 'his 1 employee' : 'his ' + subordinates().length + ' employees' }}
+            to <strong>{{ name }}</strong>.
+          } @else {
+            and leave {{ subordinates().length === 1 ? 'his 1 employee' : 'his ' + subordinates().length + ' employees' }}
+            <strong>without a manager</strong>.
+          }
         </p>
+        <p class="confirm-warning">This action cannot be undone.</p>
       }
 
       @if (error()) {
@@ -40,10 +52,17 @@
     </div>
 
     <footer class="dialog-footer dialog-footer-padded">
-      <button type="button" class="btn btn-ghost" (click)="closed.emit()">Cancel</button>
-      <button type="button" class="btn btn-danger" [disabled]="busy()" (click)="confirm()">
-        {{ busy() ? 'Deleting…' : (subordinates().length > 0 ? 'Reassign & delete' : 'Delete') }}
-      </button>
+      @if (step() === 'confirm') {
+        <button type="button" class="btn btn-ghost" [disabled]="busy()" (click)="back()">Back</button>
+        <button type="button" class="btn btn-danger" [disabled]="busy()" (click)="confirm()">
+          {{ busy() ? 'Deleting…' : 'Yes, delete manager' }}
+        </button>
+      } @else {
+        <button type="button" class="btn btn-ghost" (click)="closed.emit()">Cancel</button>
+        <button type="button" class="btn btn-danger" [disabled]="busy()" (click)="confirm()">
+          {{ busy() ? 'Deleting…' : (subordinates().length > 0 ? 'Continue' : 'Delete') }}
+        </button>
+      }
     </footer>
   </div>
 </div>
