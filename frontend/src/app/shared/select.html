@@ -1,0 +1,56 @@
+<div class="select" [class.select-open]="open()" (keydown)="onKeydown($event)">
+  <button
+    type="button"
+    class="select-trigger"
+    [attr.aria-label]="selectAriaLabel()"
+    [attr.aria-expanded]="open()"
+    aria-haspopup="listbox"
+    (click)="toggle()"
+  >
+    <span class="select-value" [class.placeholder]="selectedLabel() === null">
+      {{ selectedLabel() ?? placeholder() }}
+    </span>
+    <svg class="chevron" width="12" height="8" viewBox="0 0 12 8" fill="none" aria-hidden="true">
+      <path d="m1.5 1.75 4.5 4.5 4.5-4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+    </svg>
+  </button>
+
+  @if (open()) {
+    <div class="select-popup">
+      @if (searchable()) {
+        <div class="select-search">
+          <input
+            type="text"
+            placeholder="Search…"
+            [ngModel]="query()"
+            (ngModelChange)="onSearchChange($event)"
+          />
+        </div>
+      }
+      <ul class="select-options" role="listbox">
+        @for (option of filteredOptions(); track option.value; let i = $index) {
+          <li>
+            <button
+              type="button"
+              role="option"
+              [attr.aria-selected]="option.value === value()"
+              [class.selected]="option.value === value()"
+              [class.active]="i === activeIndex()"
+              (mouseenter)="activeIndex.set(i)"
+              (click)="choose(option)"
+            >
+              <span class="option-label">{{ option.label }}</span>
+              @if (option.value === value()) {
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="m4.5 12.5 5 5 10-11" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              }
+            </button>
+          </li>
+        } @empty {
+          <li class="select-empty">No matches</li>
+        }
+      </ul>
+    </div>
+  }
+</div>

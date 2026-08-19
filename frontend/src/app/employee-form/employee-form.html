@@ -28,26 +28,26 @@
       </div>
 
       <div class="field">
-        <label for="department">Department</label>
-        <select id="department" formControlName="departmentId">
-          <option [ngValue]="null" disabled>Select a department…</option>
-          @for (dept of departments(); track dept.id) {
-            <option [ngValue]="dept.id">{{ dept.name }}</option>
-          }
-        </select>
+        <label id="department-label">Department</label>
+        <app-select
+          formControlName="departmentId"
+          placeholder="Select a department…"
+          selectAriaLabel="Department"
+          [options]="departmentOptions()"
+        />
         @if (invalid('departmentId')) {
           <span class="field-error">Department is required</span>
         }
       </div>
 
       <div class="field">
-        <label for="manager">Manager</label>
-        <select id="manager" formControlName="managerId">
-          <option [ngValue]="null">— No manager —</option>
-          @for (manager of managerOptions(); track manager.id) {
-            <option [ngValue]="manager.id">{{ manager.fullName }}</option>
-          }
-        </select>
+        <label id="manager-label">Manager</label>
+        <app-select
+          formControlName="managerId"
+          placeholder="— No manager —"
+          selectAriaLabel="Manager"
+          [options]="managerOptions()"
+        />
       </div>
 
       <div class="field">

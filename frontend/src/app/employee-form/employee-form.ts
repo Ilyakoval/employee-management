@@ -2,10 +2,11 @@ import { Component, HostListener, OnInit, computed, inject, input, output } from
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Department, Employee, EmployeeUpsert } from '../models';
 import { FocusTrap } from '../shared/focus-trap';
+import { Select, SelectOption } from '../shared/select';
 
 @Component({
   selector: 'app-employee-form',
-  imports: [ReactiveFormsModule, FocusTrap],
+  imports: [ReactiveFormsModule, FocusTrap, Select],
   templateUrl: './employee-form.html',
   styleUrl: './employee-form.scss'
 })
@@ -30,13 +31,18 @@ export class EmployeeForm implements OnInit {
     salary: [null as number | null, [Validators.required, Validators.min(0)]]
   });
 
+  readonly departmentOptions = computed<SelectOption[]>(() =>
+    this.departments().map(d => ({ value: d.id, label: d.name }))
+  );
+
   /** An employee cannot be a manager of himself, so exclude him from the options. */
-  readonly managerOptions = computed(() => {
+  readonly managerOptions = computed<SelectOption[]>(() => {
     const currentId = this.employee()?.id;
-    return this.allEmployees()
+    const employees = this.allEmployees()
       .filter(e => e.id !== currentId)
-      .map(e => ({ id: e.id, fullName: `${e.firstName} ${e.lastName}`.trim() }))
-      .sort((a, b) => a.fullName.localeCompare(b.fullName));
+      .map(e => ({ value: e.id, label: `${e.firstName} ${e.lastName}`.trim() }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+    return [{ value: null, label: '— No manager —' }, ...employees];
   });
 
   readonly isEdit = computed(() => this.employee() !== null);

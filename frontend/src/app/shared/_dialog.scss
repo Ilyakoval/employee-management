@@ -4,19 +4,20 @@
   inset: 0;
   z-index: 100;
   display: flex;
-  align-items: center;
-  justify-content: center;
   padding: 20px;
   background: rgba(10, 13, 18, 0.5);
   backdrop-filter: blur(3px);
   animation: fade-in 0.18s ease-out;
+  /* The overlay scrolls, not the dialog — a scrolling dialog would clip
+     the dropdown popups rendered inside it. */
+  overflow-y: auto;
 }
 
 .dialog {
   width: 100%;
   max-width: 440px;
-  max-height: calc(100vh - 40px);
-  overflow-y: auto;
+  height: fit-content;
+  margin: auto; /* centers in the flex overlay, stays scrollable when taller */
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);

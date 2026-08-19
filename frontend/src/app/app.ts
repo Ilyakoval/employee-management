@@ -8,6 +8,7 @@ import { SortColumn, SortDirection, filterEmployees, sortEmployees } from './emp
 import { EmployeeForm } from './employee-form/employee-form';
 import { ConfirmDialog } from './confirm-dialog/confirm-dialog';
 import { HighlightPipe } from './shared/highlight.pipe';
+import { Select, SelectOption } from './shared/select';
 
 interface Toast {
   type: 'success' | 'error';
@@ -22,7 +23,7 @@ interface Column {
 
 @Component({
   selector: 'app-root',
-  imports: [DecimalPipe, FormsModule, EmployeeForm, ConfirmDialog, HighlightPipe],
+  imports: [DecimalPipe, FormsModule, EmployeeForm, ConfirmDialog, HighlightPipe, Select],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
@@ -44,6 +45,16 @@ export class App implements OnInit {
   readonly managerFilter = signal<number | null>(null);
   readonly sortColumn = signal<SortColumn | null>(null);
   readonly sortDirection = signal<SortDirection>('asc');
+
+  readonly departmentOptions = computed<SelectOption[]>(() => [
+    { value: null, label: 'All departments' },
+    ...this.store.departments().map(d => ({ value: d.id, label: d.name }))
+  ]);
+
+  readonly managerOptions = computed<SelectOption[]>(() => [
+    { value: null, label: 'All managers' },
+    ...this.store.managers().map(m => ({ value: m.id, label: m.fullName }))
+  ]);
 
   readonly hasActiveFilters = computed(
     () => this.search().trim() !== '' || this.departmentFilter() !== null || this.managerFilter() !== null

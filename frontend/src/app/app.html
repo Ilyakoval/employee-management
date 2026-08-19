@@ -1,5 +1,5 @@
-<div class="page">
-  <header class="topbar">
+<header class="topbar">
+  <div class="topbar-inner">
     <div class="brand">
       <div class="brand-mark">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -31,8 +31,10 @@
         </svg>
       }
     </button>
-  </header>
+  </div>
+</header>
 
+<div class="page">
   <main>
     <section class="card">
       <div class="toolbar">
@@ -49,28 +51,20 @@
           />
         </div>
         <div class="filter-group">
-          <select
+          <app-select
             class="filter-select"
-            aria-label="Filter by department"
+            selectAriaLabel="Filter by department"
+            [options]="departmentOptions()"
             [ngModel]="departmentFilter()"
             (ngModelChange)="departmentFilter.set($event)"
-          >
-            <option [ngValue]="null">All departments</option>
-            @for (dept of store.departments(); track dept.id) {
-              <option [ngValue]="dept.id">{{ dept.name }}</option>
-            }
-          </select>
-          <select
+          />
+          <app-select
             class="filter-select"
-            aria-label="Filter by manager"
+            selectAriaLabel="Filter by manager"
+            [options]="managerOptions()"
             [ngModel]="managerFilter()"
             (ngModelChange)="managerFilter.set($event)"
-          >
-            <option [ngValue]="null">All managers</option>
-            @for (manager of store.managers(); track manager.id) {
-              <option [ngValue]="manager.id">{{ manager.fullName }}</option>
-            }
-          </select>
+          />
           @if (hasActiveFilters()) {
             <button type="button" class="icon-btn clear-filters" aria-label="Clear filters" title="Clear filters" (click)="clearFilters()">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
