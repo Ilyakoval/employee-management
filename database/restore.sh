@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # Restores TestDB.bak into the dockerized SQL Server (see docker-compose.yml).
+# Idempotent: safe to re-run at any time to reset the data, even while the
+# backend keeps open connections (they are rolled back via SINGLE_USER).
 set -euo pipefail
 
 CONTAINER=testdb-mssql
@@ -16,9 +18,12 @@ done
 
 echo "Restoring TestDB..."
 docker exec "$CONTAINER" "$SQLCMD" -S localhost -U sa -P "$PASSWORD" -C -Q "
+IF DB_ID('TestDB') IS NOT NULL
+    ALTER DATABASE TestDB SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
 RESTORE DATABASE TestDB FROM DISK='/backup/TestDB.bak'
 WITH MOVE 'TestDB'     TO '/var/opt/mssql/data/TestDB.mdf',
      MOVE 'TestDB_log' TO '/var/opt/mssql/data/TestDB_log.ldf',
-     REPLACE"
+     REPLACE;
+ALTER DATABASE TestDB SET MULTI_USER;"
 
 echo "Done. TestDB is ready on localhost,1433 (sa / $PASSWORD)."

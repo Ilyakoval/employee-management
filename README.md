@@ -39,6 +39,17 @@ sql/            queries.sql — the 5 SQL tasks
 
 ## Getting started
 
+### Prerequisites
+
+| Tool | Version | Check with |
+|------|---------|------------|
+| Docker Desktop | any recent | `docker --version` |
+| .NET SDK | 10.x | `dotnet --version` |
+| Node.js | 20.19+ (or 22+) | `node --version` |
+
+On Apple Silicon the SQL Server image runs via Rosetta emulation
+(`platform: linux/amd64` is already set in `docker-compose.yml`).
+
 ### 1. Database
 
 With Docker (recommended):
@@ -48,6 +59,9 @@ docker compose up -d          # starts SQL Server 2022 on localhost,1433
 ./database/restore.sh         # restores TestDB from the backup
 ```
 
+`restore.sh` is idempotent — run it again at any time to reset the data back
+to the original 200 employees.
+
 Or restore `database/TestDB.bak` on your own SQL Server instance and adjust
 the connection string in `backend/appsettings.json`.
 
@@ -55,16 +69,48 @@ the connection string in `backend/appsettings.json`.
 
 ```bash
 cd backend
-dotnet run                    # http://localhost:5080
+dotnet run                    # API on http://localhost:5080
 ```
+
+Sanity check: `curl http://localhost:5080/api/departments` should return 4 departments.
 
 ### 3. Frontend
 
 ```bash
 cd frontend
 npm install
-npm start                     # http://localhost:4200
+npm start                     # UI on http://localhost:4200
 ```
+
+Open http://localhost:4200 — you should see a table with 200 employees.
+
+## Manual testing checklist
+
+Everything from the assignment can be verified through the UI:
+
+1. **Table** — name, surname, department, manager's full name and salary
+   for every employee; click column headers to sort (third click resets),
+   use the search box and the department/manager filters.
+2. **Create** — "Add employee", fill the form; department and manager are
+   dropdowns with search. The employee appears in the table.
+3. **Edit** — pencil icon on a row; change any field including department
+   and manager. A renamed manager updates in his subordinates' rows too.
+4. **Self-manager rule** — edit any employee and try to pick him as his own
+   manager: he is not present in his own manager dropdown. The rule is also
+   enforced server-side (400), which the API tests cover.
+5. **Delete a regular employee** — trash icon → confirm; the row disappears.
+6. **Delete a manager** — try deleting someone from the Manager column
+   (e.g. Chris Stanley): the dialog shows *"This employee is a manager of
+   other employees and cannot be deleted."* (HTTP 409).
+7. **Themes** — the sun/moon button in the header toggles light/dark;
+   the choice survives a page reload.
+8. **SQL tasks** — run [`sql/queries.sql`](sql/queries.sql) against the
+   restored database, e.g.:
+
+   ```bash
+   docker exec -i testdb-mssql /opt/mssql-tools18/bin/sqlcmd \
+     -S localhost -U sa -P 'TestDb!Passw0rd' -C -W < sql/queries.sql
+   ```
 
 ## API
 
