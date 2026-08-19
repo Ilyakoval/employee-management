@@ -1,96 +1,61 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ApiService } from './api.service';
+import { EmployeeStore } from './employee-store';
 import { ThemeService } from './theme.service';
-import { Department, Employee, EmployeeUpsert } from './models';
+import { Employee, EmployeeUpsert } from './models';
+import { SortColumn, SortDirection, filterEmployees, sortEmployees } from './employee-filters';
 import { EmployeeForm } from './employee-form/employee-form';
 import { ConfirmDialog } from './confirm-dialog/confirm-dialog';
+import { HighlightPipe } from './shared/highlight.pipe';
 
 interface Toast {
   type: 'success' | 'error';
   text: string;
 }
 
-type SortColumn = 'firstName' | 'lastName' | 'departmentName' | 'managerName' | 'salary';
+interface Column {
+  key: SortColumn;
+  label: string;
+  numeric: boolean;
+}
 
 @Component({
   selector: 'app-root',
-  imports: [DecimalPipe, FormsModule, EmployeeForm, ConfirmDialog],
+  imports: [DecimalPipe, FormsModule, EmployeeForm, ConfirmDialog, HighlightPipe],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
 export class App implements OnInit {
-  private readonly api = inject(ApiService);
+  readonly store = inject(EmployeeStore);
   readonly theme = inject(ThemeService);
 
-  readonly employees = signal<Employee[]>([]);
-  readonly departments = signal<Department[]>([]);
-  readonly loading = signal(true);
-  readonly loadError = signal<string | null>(null);
+  readonly columns: Column[] = [
+    { key: 'firstName', label: 'Name', numeric: false },
+    { key: 'lastName', label: 'Surname', numeric: false },
+    { key: 'departmentName', label: 'Department', numeric: false },
+    { key: 'managerName', label: 'Manager', numeric: false },
+    { key: 'salary', label: 'Salary', numeric: true }
+  ];
 
-  // Filters
+  // Filters and sorting (view state)
   readonly search = signal('');
   readonly departmentFilter = signal<number | null>(null);
   readonly managerFilter = signal<number | null>(null);
-
-  // Sorting
   readonly sortColumn = signal<SortColumn | null>(null);
-  readonly sortDirection = signal<'asc' | 'desc'>('asc');
-
-  /** Employees that manage at least one other person — options for the manager filter. */
-  readonly managers = computed(() => {
-    const managerIds = new Set(
-      this.employees().map(e => e.managerId).filter((id): id is number => id !== null)
-    );
-    return this.employees()
-      .filter(e => managerIds.has(e.id))
-      .map(e => ({ id: e.id, fullName: `${e.firstName} ${e.lastName}`.trim() }))
-      .sort((a, b) => a.fullName.localeCompare(b.fullName));
-  });
+  readonly sortDirection = signal<SortDirection>('asc');
 
   readonly hasActiveFilters = computed(
     () => this.search().trim() !== '' || this.departmentFilter() !== null || this.managerFilter() !== null
   );
 
   readonly filtered = computed(() => {
-    const query = this.search().trim().toLowerCase();
-    const departmentId = this.departmentFilter();
-    const managerId = this.managerFilter();
-
-    let result = this.employees().filter(e => {
-      if (departmentId !== null && e.departmentId !== departmentId) {
-        return false;
-      }
-      if (managerId !== null && e.managerId !== managerId) {
-        return false;
-      }
-      if (!query) {
-        return true;
-      }
-      return [e.firstName, e.lastName, e.departmentName ?? '', e.managerName ?? '']
-        .join(' ')
-        .toLowerCase()
-        .includes(query);
+    const visible = filterEmployees(this.store.employees(), {
+      query: this.search(),
+      departmentId: this.departmentFilter(),
+      managerId: this.managerFilter()
     });
-
-    const column = this.sortColumn();
-    if (column) {
-      const direction = this.sortDirection() === 'asc' ? 1 : -1;
-      result = [...result].sort((a, b) => {
-        const left = a[column];
-        const right = b[column];
-        if (left === null || left === undefined) return 1;
-        if (right === null || right === undefined) return -1;
-        const cmp =
-          typeof left === 'number' && typeof right === 'number'
-            ? left - right
-            : String(left).localeCompare(String(right));
-        return cmp * direction;
-      });
-    }
-
-    return result;
+    return sortEmployees(visible, this.sortColumn(), this.sortDirection());
   });
 
   // Create/edit dialog state
@@ -108,26 +73,7 @@ export class App implements OnInit {
   private toastTimer: ReturnType<typeof setTimeout> | null = null;
 
   ngOnInit(): void {
-    this.loadAll();
-  }
-
-  loadAll(): void {
-    this.loading.set(true);
-    this.loadError.set(null);
-    this.api.getDepartments().subscribe({
-      next: departments => this.departments.set(departments),
-      error: (error: Error) => this.loadError.set(error.message)
-    });
-    this.api.getEmployees().subscribe({
-      next: employees => {
-        this.employees.set(employees);
-        this.loading.set(false);
-      },
-      error: (error: Error) => {
-        this.loadError.set(error.message);
-        this.loading.set(false);
-      }
-    });
+    this.store.loadAll();
   }
 
   sortBy(column: SortColumn): void {
@@ -145,7 +91,7 @@ export class App implements OnInit {
     }
   }
 
-  sortState(column: SortColumn): 'asc' | 'desc' | null {
+  sortState(column: SortColumn): SortDirection | null {
     return this.sortColumn() === column ? this.sortDirection() : null;
   }
 
@@ -177,21 +123,10 @@ export class App implements OnInit {
     this.saving.set(true);
     this.formError.set(null);
     const current = this.editing();
-    const request = current
-      ? this.api.updateEmployee(current.id, dto)
-      : this.api.createEmployee(dto);
+    const request = current ? this.store.update(current.id, dto) : this.store.create(dto);
 
     request.subscribe({
-      next: saved => {
-        this.employees.update(list =>
-          current
-            ? list.map(e => (e.id === saved.id ? saved : e))
-            : [...list, saved]
-        );
-        // A rename or a department change may affect rows where this employee is the manager.
-        if (current) {
-          this.refreshSilently();
-        }
+      next: () => {
         this.saving.set(false);
         this.formOpen.set(false);
         this.showToast('success', current ? 'Employee updated' : 'Employee created');
@@ -208,6 +143,12 @@ export class App implements OnInit {
     this.deleting.set(employee);
   }
 
+  closeDelete(): void {
+    if (!this.deleteBusy()) {
+      this.deleting.set(null);
+    }
+  }
+
   confirmDelete(): void {
     const employee = this.deleting();
     if (!employee) {
@@ -215,9 +156,8 @@ export class App implements OnInit {
     }
     this.deleteBusy.set(true);
     this.deleteError.set(null);
-    this.api.deleteEmployee(employee.id).subscribe({
+    this.store.delete(employee.id).subscribe({
       next: () => {
-        this.employees.update(list => list.filter(e => e.id !== employee.id));
         this.deleteBusy.set(false);
         this.deleting.set(null);
         this.showToast('success', 'Employee deleted');
@@ -229,10 +169,11 @@ export class App implements OnInit {
     });
   }
 
-  private refreshSilently(): void {
-    this.api.getEmployees().subscribe({
-      next: employees => this.employees.set(employees)
-    });
+  dismissToast(): void {
+    if (this.toastTimer) {
+      clearTimeout(this.toastTimer);
+    }
+    this.toast.set(null);
   }
 
   private showToast(type: Toast['type'], text: string): void {
