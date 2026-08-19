@@ -36,19 +36,6 @@ public class EmployeesController(AppDbContext db) : ControllerBase
         return employee is null ? NotFound() : Ok(ToDto(employee));
     }
 
-    /// <summary>Lookup list for the "manager" dropdown.</summary>
-    [HttpGet("lookup")]
-    public async Task<ActionResult<IEnumerable<EmployeeLookupDto>>> GetLookup()
-    {
-        var employees = await db.Employees
-            .AsNoTracking()
-            .OrderBy(e => e.Name)
-            .Select(e => new EmployeeLookupDto(e.ID, e.Name ?? string.Empty))
-            .ToListAsync();
-
-        return Ok(employees);
-    }
-
     [HttpPost]
     public async Task<ActionResult<EmployeeDto>> Create(EmployeeUpsertDto dto)
     {
@@ -98,6 +85,13 @@ public class EmployeesController(AppDbContext db) : ControllerBase
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
     {
+        // TestDB has no FK from ManagerID, so the "is a manager" check and the
+        // delete must happen atomically — a serializable transaction prevents a
+        // concurrent request from assigning this employee as someone's manager
+        // between the check and the delete.
+        await using var transaction =
+            await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+
         var employee = await db.Employees.FirstOrDefaultAsync(e => e.ID == id);
         if (employee is null)
             return NotFound(new ProblemDetails { Title = "Employee not found." });
@@ -113,6 +107,7 @@ public class EmployeesController(AppDbContext db) : ControllerBase
 
         db.Employees.Remove(employee);
         await db.SaveChangesAsync();
+        await transaction.CommitAsync();
         return NoContent();
     }
 
