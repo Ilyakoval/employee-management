@@ -112,11 +112,13 @@
 }
 
 .filter-select {
-  width: auto;
-  max-width: 180px;
+  width: 168px;
   padding-top: 8px;
   padding-bottom: 8px;
   font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .clear-filters {
@@ -203,8 +205,20 @@ thead th {
 
 .sort-arrow {
   opacity: 0;
-  font-size: 11px;
   transition: opacity 0.15s ease;
+
+  path {
+    opacity: 0.35;
+    transition: opacity 0.15s ease;
+
+    &.active {
+      opacity: 1;
+    }
+  }
+}
+
+.sort-btn.sorted .sort-arrow path:not(.active) {
+  opacity: 0.2;
 }
 
 th.num .sort-btn {
@@ -255,8 +269,14 @@ tbody tr {
   border-radius: 999px;
   font-size: 12.5px;
   font-weight: 500;
-  background: var(--accent-soft);
-  color: var(--accent);
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+@for $i from 0 through 5 {
+  .chip-#{$i} {
+    background: var(--chip-#{$i}-bg);
+    color: var(--chip-#{$i}-fg);
+  }
 }
 
 .actions-col {
@@ -276,32 +296,17 @@ tbody tr {
   }
 }
 
-.icon-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  padding: 0;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--text-muted);
-  transition: background-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
-
-  &:hover {
-    background: var(--accent-soft);
-    color: var(--accent);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 1px;
-    opacity: 1;
-  }
+/* Table action buttons use accent colors on hover (base .icon-btn is global). */
+.actions .icon-btn:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 
-.icon-btn-danger:hover {
+.actions .icon-btn:focus-visible {
+  opacity: 1;
+}
+
+.actions .icon-btn-danger:hover {
   background: var(--danger-soft);
   color: var(--danger);
 }
@@ -366,6 +371,27 @@ tbody tr {
   background: var(--danger-soft);
   color: var(--danger);
   border-color: color-mix(in srgb, var(--danger) 25%, transparent);
+}
+
+.toast-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin-left: 2px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  opacity: 0.7;
+  transition: opacity 0.15s ease, background-color 0.15s ease;
+
+  &:hover {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.08);
+  }
 }
 
 @keyframes toast-in {

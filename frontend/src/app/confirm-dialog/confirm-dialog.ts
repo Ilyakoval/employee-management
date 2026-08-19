@@ -1,8 +1,9 @@
 import { Component, HostListener, input, output } from '@angular/core';
+import { FocusTrap } from '../shared/focus-trap';
 
 @Component({
   selector: 'app-confirm-dialog',
-  imports: [],
+  imports: [FocusTrap],
   templateUrl: './confirm-dialog.html',
   styleUrl: './confirm-dialog.scss'
 })

@@ -1,5 +1,5 @@
 <div class="overlay" (click)="closed.emit()">
-  <div class="dialog dialog-sm" role="alertdialog" aria-modal="true" (click)="$event.stopPropagation()">
+  <div class="dialog dialog-sm" role="alertdialog" aria-modal="true" appFocusTrap (click)="$event.stopPropagation()">
     <header class="dialog-header">
       <h2>{{ title() }}</h2>
       <button type="button" class="icon-btn" aria-label="Close" (click)="closed.emit()">

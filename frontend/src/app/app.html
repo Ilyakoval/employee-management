@@ -56,7 +56,7 @@
             (ngModelChange)="departmentFilter.set($event)"
           >
             <option [ngValue]="null">All departments</option>
-            @for (dept of departments(); track dept.id) {
+            @for (dept of store.departments(); track dept.id) {
               <option [ngValue]="dept.id">{{ dept.name }}</option>
             }
           </select>
@@ -67,7 +67,7 @@
             (ngModelChange)="managerFilter.set($event)"
           >
             <option [ngValue]="null">All managers</option>
-            @for (manager of managers(); track manager.id) {
+            @for (manager of store.managers(); track manager.id) {
               <option [ngValue]="manager.id">{{ manager.fullName }}</option>
             }
           </select>
@@ -80,7 +80,7 @@
             </button>
           }
         </div>
-        <span class="count">{{ filtered().length }} of {{ employees().length }}</span>
+        <span class="count">{{ filtered().length }} of {{ store.employees().length }}</span>
         <button type="button" class="btn btn-primary" (click)="openCreate()">
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
             <path d="M8 2.5v11M2.5 8h11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
@@ -89,12 +89,12 @@
         </button>
       </div>
 
-      @if (loadError()) {
+      @if (store.loadError()) {
         <div class="state state-error">
-          <p>{{ loadError() }}</p>
-          <button type="button" class="btn btn-ghost" (click)="loadAll()">Retry</button>
+          <p>{{ store.loadError() }}</p>
+          <button type="button" class="btn btn-ghost" (click)="store.loadAll()">Retry</button>
         </div>
-      } @else if (loading()) {
+      } @else if (store.loading()) {
         <div class="state">
           <div class="spinner" aria-label="Loading"></div>
         </div>
@@ -103,23 +103,17 @@
           <table>
             <thead>
               <tr>
-                @for (col of [
-                  { key: 'firstName', label: 'Name', numeric: false },
-                  { key: 'lastName', label: 'Surname', numeric: false },
-                  { key: 'departmentName', label: 'Department', numeric: false },
-                  { key: 'managerName', label: 'Manager', numeric: false },
-                  { key: 'salary', label: 'Salary', numeric: true }
-                ]; track col.key) {
-                  <th [class.num]="col.numeric" [attr.aria-sort]="sortState($any(col.key)) === 'asc' ? 'ascending' : sortState($any(col.key)) === 'desc' ? 'descending' : null">
-                    <button type="button" class="sort-btn" [class.sorted]="sortState($any(col.key))" (click)="sortBy($any(col.key))">
+                @for (col of columns; track col.key) {
+                  <th
+                    [class.num]="col.numeric"
+                    [attr.aria-sort]="sortState(col.key) === 'asc' ? 'ascending' : sortState(col.key) === 'desc' ? 'descending' : null"
+                  >
+                    <button type="button" class="sort-btn" [class.sorted]="sortState(col.key)" (click)="sortBy(col.key)">
                       {{ col.label }}
-                      <span class="sort-arrow" aria-hidden="true">
-                        @switch (sortState($any(col.key))) {
-                          @case ('asc') { ↑ }
-                          @case ('desc') { ↓ }
-                          @default { ↕ }
-                        }
-                      </span>
+                      <svg class="sort-arrow" width="9" height="12" viewBox="0 0 9 12" aria-hidden="true">
+                        <path class="arrow-up" [class.active]="sortState(col.key) === 'asc'" d="M4.5 1 7.6 4.8H1.4L4.5 1Z" fill="currentColor"/>
+                        <path class="arrow-down" [class.active]="sortState(col.key) === 'desc'" d="M4.5 11 1.4 7.2h6.2L4.5 11Z" fill="currentColor"/>
+                      </svg>
                     </button>
                   </th>
                 }
@@ -129,18 +123,18 @@
             <tbody>
               @for (employee of filtered(); track employee.id) {
                 <tr>
-                  <td>{{ employee.firstName }}</td>
-                  <td>{{ employee.lastName }}</td>
+                  <td [innerHTML]="employee.firstName | highlight: search()"></td>
+                  <td [innerHTML]="employee.lastName | highlight: search()"></td>
                   <td>
                     @if (employee.departmentName) {
-                      <span class="chip">{{ employee.departmentName }}</span>
+                      <span class="chip chip-{{ (employee.departmentId ?? 0) % 6 }}">{{ employee.departmentName }}</span>
                     } @else {
                       <span class="muted">—</span>
                     }
                   </td>
                   <td>
                     @if (employee.managerName) {
-                      {{ employee.managerName }}
+                      <span [innerHTML]="employee.managerName | highlight: search()"></span>
                     } @else {
                       <span class="muted">—</span>
                     }
@@ -175,8 +169,8 @@
 @if (formOpen()) {
   <app-employee-form
     [employee]="editing()"
-    [departments]="departments()"
-    [allEmployees]="employees()"
+    [departments]="store.departments()"
+    [allEmployees]="store.employees()"
     [saving]="saving()"
     [serverError]="formError()"
     (save)="saveEmployee($event)"
@@ -191,7 +185,7 @@
     [busy]="deleteBusy()"
     [error]="deleteError()"
     (confirmed)="confirmDelete()"
-    (closed)="deleting.set(null)"
+    (closed)="closeDelete()"
   />
 }
 
@@ -208,5 +202,10 @@
       </svg>
     }
     {{ t.text }}
+    <button type="button" class="toast-close" aria-label="Dismiss" (click)="dismissToast()">
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+        <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+    </button>
   </div>
 }

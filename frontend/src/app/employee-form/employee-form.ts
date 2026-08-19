@@ -1,14 +1,15 @@
-import { Component, HostListener, computed, inject, input, output } from '@angular/core';
+import { Component, HostListener, OnInit, computed, inject, input, output } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Department, Employee, EmployeeUpsert } from '../models';
+import { FocusTrap } from '../shared/focus-trap';
 
 @Component({
   selector: 'app-employee-form',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, FocusTrap],
   templateUrl: './employee-form.html',
   styleUrl: './employee-form.scss'
 })
-export class EmployeeForm {
+export class EmployeeForm implements OnInit {
   /** Employee being edited, or null when creating a new one. */
   readonly employee = input<Employee | null>(null);
   readonly departments = input.required<Department[]>();
