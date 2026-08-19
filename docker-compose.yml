@@ -1,0 +1,16 @@
+services:
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64
+    container_name: testdb-mssql
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "TestDb!Passw0rd"
+    ports:
+      - "1433:1433"
+    volumes:
+      - ./database:/backup:ro
+      - mssql-data:/var/opt/mssql
+
+volumes:
+  mssql-data:

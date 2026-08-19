@@ -1,0 +1,27 @@
+@use '../shared/dialog' as *;
+
+.dialog-sm {
+  max-width: 400px;
+}
+
+.dialog-body {
+  padding: 12px 24px 4px;
+
+  p {
+    margin: 0;
+    color: var(--text-muted);
+  }
+}
+
+.server-error {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 13px;
+}
+
+.dialog-footer-padded {
+  padding: 16px 24px 24px;
+}
