@@ -14,6 +14,12 @@
       </div>
     </div>
 
+    <nav class="nav" aria-label="Main">
+      <a routerLink="/employees" routerLinkActive="active">Employees</a>
+      <a routerLink="/reports" routerLinkActive="active">Reports</a>
+      <a routerLink="/org" routerLinkActive="active">Org chart</a>
+    </nav>
+
     <button
       type="button"
       class="theme-toggle"
@@ -36,170 +42,6 @@
 
 <div class="page">
   <main>
-    <section class="card">
-      <div class="toolbar">
-        <div class="search-box">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-            <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/>
-            <path d="m20 20-3.2-3.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-          </svg>
-          <input
-            type="search"
-            placeholder="Search by name, department or manager…"
-            [ngModel]="search()"
-            (ngModelChange)="search.set($event)"
-          />
-        </div>
-        <div class="filter-group">
-          <app-select
-            class="filter-select"
-            selectAriaLabel="Filter by department"
-            [options]="departmentOptions()"
-            [ngModel]="departmentFilter()"
-            (ngModelChange)="departmentFilter.set($event)"
-          />
-          <app-select
-            class="filter-select"
-            selectAriaLabel="Filter by manager"
-            [options]="managerOptions()"
-            [ngModel]="managerFilter()"
-            (ngModelChange)="managerFilter.set($event)"
-          />
-          @if (hasActiveFilters()) {
-            <button type="button" class="icon-btn clear-filters" aria-label="Clear filters" title="Clear filters" (click)="clearFilters()">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-                <path d="M4 5h16l-6.5 7.5V19l-3 2v-8.5L4 5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
-                <path d="m3 3 18 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-              </svg>
-            </button>
-          }
-        </div>
-        <span class="count">{{ filtered().length }} of {{ store.employees().length }}</span>
-        <button type="button" class="btn btn-primary" (click)="openCreate()">
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-            <path d="M8 2.5v11M2.5 8h11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-          </svg>
-          Add employee
-        </button>
-      </div>
-
-      @if (store.loadError()) {
-        <div class="state state-error">
-          <p>{{ store.loadError() }}</p>
-          <button type="button" class="btn btn-ghost" (click)="store.loadAll()">Retry</button>
-        </div>
-      } @else if (store.loading()) {
-        <div class="state">
-          <div class="spinner" aria-label="Loading"></div>
-        </div>
-      } @else {
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                @for (col of columns; track col.key) {
-                  <th
-                    [class.num]="col.numeric"
-                    [attr.aria-sort]="sortState(col.key) === 'asc' ? 'ascending' : sortState(col.key) === 'desc' ? 'descending' : null"
-                  >
-                    <button type="button" class="sort-btn" [class.sorted]="sortState(col.key)" (click)="sortBy(col.key)">
-                      {{ col.label }}
-                      <svg class="sort-arrow" width="9" height="12" viewBox="0 0 9 12" aria-hidden="true">
-                        <path class="arrow-up" [class.active]="sortState(col.key) === 'asc'" d="M4.5 1 7.6 4.8H1.4L4.5 1Z" fill="currentColor"/>
-                        <path class="arrow-down" [class.active]="sortState(col.key) === 'desc'" d="M4.5 11 1.4 7.2h6.2L4.5 11Z" fill="currentColor"/>
-                      </svg>
-                    </button>
-                  </th>
-                }
-                <th class="actions-col"><span class="visually-hidden">Actions</span></th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (employee of filtered(); track employee.id) {
-                <tr>
-                  <td [innerHTML]="employee.firstName | highlight: search()"></td>
-                  <td [innerHTML]="employee.lastName | highlight: search()"></td>
-                  <td>
-                    @if (employee.departmentName) {
-                      <span class="chip chip-{{ (employee.departmentId ?? 0) % 6 }}">{{ employee.departmentName }}</span>
-                    } @else {
-                      <span class="muted">—</span>
-                    }
-                  </td>
-                  <td>
-                    @if (employee.managerName) {
-                      <span [innerHTML]="employee.managerName | highlight: search()"></span>
-                    } @else {
-                      <span class="muted">—</span>
-                    }
-                  </td>
-                  <td class="num salary">{{ employee.salary | number: '1.2-2' }}</td>
-                  <td class="actions">
-                    <button type="button" class="icon-btn" aria-label="Edit" title="Edit" (click)="openEdit(employee)">
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-                        <path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
-                      </svg>
-                    </button>
-                    <button type="button" class="icon-btn icon-btn-danger" aria-label="Delete" title="Delete" (click)="askDelete(employee)">
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-                        <path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M10 11v6M14 11v6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-                      </svg>
-                    </button>
-                  </td>
-                </tr>
-              } @empty {
-                <tr>
-                  <td colspan="6" class="empty">No employees match your search</td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      }
-    </section>
+    <router-outlet />
   </main>
 </div>
-
-@if (formOpen()) {
-  <app-employee-form
-    [employee]="editing()"
-    [departments]="store.departments()"
-    [allEmployees]="store.employees()"
-    [saving]="saving()"
-    [serverError]="formError()"
-    (save)="saveEmployee($event)"
-    (closed)="closeForm()"
-  />
-}
-
-@if (deleting(); as employee) {
-  <app-confirm-dialog
-    title="Delete employee"
-    [message]="'Are you sure you want to delete ' + employee.firstName + ' ' + employee.lastName + '? This action cannot be undone.'"
-    [busy]="deleteBusy()"
-    [error]="deleteError()"
-    (confirmed)="confirmDelete()"
-    (closed)="closeDelete()"
-  />
-}
-
-@if (toast(); as t) {
-  <div class="toast" [class.toast-error]="t.type === 'error'" role="status">
-    @if (t.type === 'success') {
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-        <path d="m4.5 12.5 5 5 10-11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    } @else {
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-        <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/>
-        <path d="M12 7.5V13M12 16.2v.3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-      </svg>
-    }
-    {{ t.text }}
-    <button type="button" class="toast-close" aria-label="Dismiss" (click)="dismissToast()">
-      <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-        <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-      </svg>
-    </button>
-  </div>
-}

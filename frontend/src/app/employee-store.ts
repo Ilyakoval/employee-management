@@ -64,9 +64,26 @@ export class EmployeeStore {
     );
   }
 
-  delete(id: number): Observable<void> {
-    return this.api.deleteEmployee(id).pipe(
-      tap(() => this.employees.update(list => list.filter(e => e.id !== id)))
+  delete(id: number, reassignTo?: number | 'none'): Observable<void> {
+    return this.api.deleteEmployee(id, reassignTo).pipe(
+      tap(() =>
+        this.employees.update(list => {
+          const newManagerId = reassignTo === undefined || reassignTo === 'none' ? null : reassignTo;
+          const newManager = newManagerId === null ? undefined : list.find(e => e.id === newManagerId);
+          const newManagerName = newManager
+            ? `${newManager.firstName} ${newManager.lastName}`.trim()
+            : null;
+          return list
+            .filter(e => e.id !== id)
+            .map(e => {
+              if (e.managerId !== id) return e;
+              // Mirrors the server rule: the new manager himself becomes top-level.
+              return e.id === newManagerId
+                ? { ...e, managerId: null, managerName: null }
+                : { ...e, managerId: newManagerId, managerName: newManagerName };
+            });
+        })
+      )
     );
   }
 }

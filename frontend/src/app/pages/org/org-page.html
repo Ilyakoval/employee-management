@@ -1,0 +1,77 @@
+<section class="card">
+  <div class="org-toolbar">
+    <div>
+      <h2>Organization chart</h2>
+      <p class="org-note">
+        Built from manager references. {{ store.employees().length }} employees,
+        {{ forest().length }} top-level branches.
+      </p>
+    </div>
+    <div class="org-actions">
+      <button type="button" class="btn btn-ghost" (click)="expandAll()">Expand all</button>
+      <button type="button" class="btn btn-ghost" (click)="collapseAll()">Collapse all</button>
+    </div>
+  </div>
+
+  @if (store.loadError()) {
+    <div class="state state-error">
+      <p>{{ store.loadError() }}</p>
+      <button type="button" class="btn btn-ghost" (click)="store.loadAll()">Retry</button>
+    </div>
+  } @else if (store.loading()) {
+    <div class="state">
+      <div class="spinner" aria-label="Loading"></div>
+    </div>
+  } @else {
+    <ul class="tree" role="tree">
+      @for (row of rows(); track row.node.employee.id) {
+        <li
+          class="tree-row"
+          role="treeitem"
+          [attr.aria-expanded]="row.node.children.length > 0 ? expanded().has(row.node.employee.id) : null"
+          [style.--depth]="row.depth"
+        >
+          @if (row.node.children.length > 0) {
+            <button
+              type="button"
+              class="tree-toggle"
+              [class.open]="expanded().has(row.node.employee.id)"
+              [attr.aria-label]="(expanded().has(row.node.employee.id) ? 'Collapse ' : 'Expand ') + row.node.employee.firstName"
+              (click)="toggle(row.node.employee.id)"
+            >
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                <path d="m6 4 4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          } @else {
+            <span class="tree-leaf-dot" aria-hidden="true"></span>
+          }
+
+          <span class="tree-name">
+            {{ row.node.employee.firstName }} {{ row.node.employee.lastName }}
+          </span>
+
+          @if (row.node.employee.departmentName) {
+            <span class="chip chip-{{ (row.node.employee.departmentId ?? 0) % 6 }}">
+              {{ row.node.employee.departmentName }}
+            </span>
+          }
+
+          @if (row.node.totalReports > 0) {
+            <span class="reports-badge" [title]="row.node.children.length + ' direct'">
+              {{ row.node.totalReports }} {{ row.node.totalReports === 1 ? 'report' : 'reports' }}
+            </span>
+          }
+
+          @if (row.node.cycleBroken) {
+            <span class="cycle-badge" title="This chain of managers forms a cycle; the tree is broken here.">
+              ↩ reports to {{ row.node.employee.managerName }}
+            </span>
+          }
+
+          <span class="tree-salary">{{ row.node.employee.salary | number: '1.2-2' }}</span>
+        </li>
+      }
+    </ul>
+  }
+</section>

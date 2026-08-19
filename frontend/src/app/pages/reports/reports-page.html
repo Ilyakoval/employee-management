@@ -1,0 +1,141 @@
+@if (error()) {
+  <div class="card">
+    <div class="state state-error">
+      <p>{{ error() }}</p>
+      <button type="button" class="btn btn-ghost" (click)="load()">Retry</button>
+    </div>
+  </div>
+} @else if (loading()) {
+  <div class="card">
+    <div class="state">
+      <div class="spinner" aria-label="Loading"></div>
+    </div>
+  </div>
+} @else {
+  <div class="reports-grid">
+    <section class="card report-card span-2">
+      <header class="report-header">
+        <h2>Salary totals by department</h2>
+        <span class="task-badge">SQL task 5</span>
+      </header>
+      <p class="report-note">The top department has the highest sum of salaries of all its employees.</p>
+      <div class="bars">
+        @for (row of totals(); track row.department; let first = $first) {
+          <div class="bar-row" [class.bar-top]="first">
+            <span class="bar-label">
+              {{ row.department }}
+              @if (first) {
+                <span class="top-chip">Top</span>
+              }
+            </span>
+            <div class="bar-track">
+              <div class="bar-fill" [style.width.%]="barWidth(row)"></div>
+            </div>
+            <span class="bar-value">{{ row.totalSalary | number: '1.2-2' }}</span>
+          </div>
+        }
+      </div>
+    </section>
+
+    <section class="card report-card">
+      <header class="report-header">
+        <h2>Top earner in each department</h2>
+        <span class="task-badge">SQL task 2</span>
+      </header>
+      <table class="mini-table">
+        <thead>
+          <tr><th>Department</th><th>Employee</th><th class="num">Salary</th></tr>
+        </thead>
+        <tbody>
+          @for (row of topEarners(); track row.department + row.employee) {
+            <tr>
+              <td>{{ row.department }}</td>
+              <td>{{ row.employee }}</td>
+              <td class="num">{{ row.salary | number: '1.2-2' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card report-card">
+      <header class="report-header">
+        <h2>Departments with more than 50 employees</h2>
+        <span class="task-badge">SQL task 3</span>
+      </header>
+      @if (largeDepartments().length === 0) {
+        <p class="report-note">No department has more than 50 employees.</p>
+      } @else {
+        <table class="mini-table">
+          <thead>
+            <tr><th>Department</th><th class="num">Employees</th></tr>
+          </thead>
+          <tbody>
+            @for (row of largeDepartments(); track row.department) {
+              <tr>
+                <td>{{ row.department }}</td>
+                <td class="num">{{ row.employeeCount }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </section>
+
+    <section class="card report-card span-2">
+      <header class="report-header">
+        <h2>Earning more than their manager</h2>
+        <span class="count-badge">{{ aboveManager().length }}</span>
+        <span class="task-badge">SQL task 1</span>
+      </header>
+      <table class="mini-table">
+        <thead>
+          <tr><th>Employee</th><th class="num">Salary</th><th>Manager</th><th class="num">Manager's salary</th></tr>
+        </thead>
+        <tbody>
+          @for (row of aboveManagerVisible(); track row.id) {
+            <tr>
+              <td>{{ row.employee }}</td>
+              <td class="num strong">{{ row.salary | number: '1.2-2' }}</td>
+              <td>{{ row.manager }}</td>
+              <td class="num muted">{{ row.managerSalary | number: '1.2-2' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      @if (aboveManager().length > previewRows) {
+        <button type="button" class="btn btn-ghost show-more" (click)="showAllAboveManager.set(!showAllAboveManager())">
+          {{ showAllAboveManager() ? 'Show fewer' : 'Show all ' + aboveManager().length }}
+        </button>
+      }
+    </section>
+
+    <section class="card report-card span-2">
+      <header class="report-header">
+        <h2>Manager in a different department</h2>
+        <span class="count-badge">{{ crossDepartment().length }}</span>
+        <span class="task-badge">SQL task 4</span>
+      </header>
+      <table class="mini-table">
+        <thead>
+          <tr><th>Employee</th><th>Department</th><th>Manager</th><th>Manager's department</th></tr>
+        </thead>
+        <tbody>
+          @for (row of crossDepartmentVisible(); track row.id) {
+            <tr>
+              <td>{{ row.employee }}</td>
+              <td>{{ row.employeeDepartment }}</td>
+              <td>{{ row.manager }}</td>
+              <td>{{ row.managerDepartment }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      @if (crossDepartment().length > previewRows) {
+        <button type="button" class="btn btn-ghost show-more" (click)="showAllCrossDepartment.set(!showAllCrossDepartment())">
+          {{ showAllCrossDepartment() ? 'Show fewer' : 'Show all ' + crossDepartment().length }}
+        </button>
+      }
+    </section>
+  </div>
+}

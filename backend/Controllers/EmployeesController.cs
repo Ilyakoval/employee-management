@@ -82,13 +82,18 @@ public class EmployeesController(AppDbContext db) : ControllerBase
         return Ok(ToDto(employee));
     }
 
+    /// <summary>
+    /// Deletes an employee. A manager cannot be deleted while he still has
+    /// subordinates — pass <paramref name="reassignTo"/> (an employee id or
+    /// "none") to move his reports to a new manager in the same transaction.
+    /// </summary>
     [HttpDelete("{id:int}")]
-    public async Task<IActionResult> Delete(int id)
+    public async Task<IActionResult> Delete(int id, [FromQuery] string? reassignTo = null)
     {
-        // TestDB has no FK from ManagerID, so the "is a manager" check and the
-        // delete must happen atomically — a serializable transaction prevents a
-        // concurrent request from assigning this employee as someone's manager
-        // between the check and the delete.
+        // TestDB has no FK from ManagerID, so the subordinate check, the
+        // reassignment and the delete must happen atomically — a serializable
+        // transaction prevents a concurrent request from assigning this
+        // employee as someone's manager between the check and the delete.
         await using var transaction =
             await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
 
@@ -96,13 +101,47 @@ public class EmployeesController(AppDbContext db) : ControllerBase
         if (employee is null)
             return NotFound(new ProblemDetails { Title = "Employee not found." });
 
-        var isManager = await db.Employees.AnyAsync(e => e.ManagerID == id && e.ID != id);
-        if (isManager)
+        var subordinates = await db.Employees
+            .Where(e => e.ManagerID == id && e.ID != id)
+            .ToListAsync();
+
+        if (subordinates.Count > 0)
         {
-            return Conflict(new ProblemDetails
+            if (reassignTo is null)
             {
-                Title = "This employee is a manager of other employees and cannot be deleted."
-            });
+                var problem = new ProblemDetails
+                {
+                    Title = "This employee is a manager of other employees and cannot be deleted."
+                };
+                problem.Extensions["subordinateCount"] = subordinates.Count;
+                return Conflict(problem);
+            }
+
+            int? newManagerId;
+            if (reassignTo == "none")
+            {
+                newManagerId = null;
+            }
+            else if (int.TryParse(reassignTo, out var targetId))
+            {
+                if (targetId == id)
+                    return BadRequest(new ProblemDetails
+                        { Title = "Subordinates cannot be reassigned to the employee being deleted." });
+                if (!await db.Employees.AnyAsync(e => e.ID == targetId))
+                    return BadRequest(new ProblemDetails
+                        { Title = "The reassignment target does not exist." });
+                newManagerId = targetId;
+            }
+            else
+            {
+                return BadRequest(new ProblemDetails
+                    { Title = "reassignTo must be an employee id or 'none'." });
+            }
+
+            // If the new manager was himself a subordinate of the deleted one,
+            // he becomes a top-level manager instead of reporting to himself.
+            foreach (var subordinate in subordinates)
+                subordinate.ManagerID = subordinate.ID == newManagerId ? null : newManagerId;
         }
 
         db.Employees.Remove(employee);

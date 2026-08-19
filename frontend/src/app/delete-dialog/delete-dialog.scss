@@ -1,7 +1,7 @@
 @use '../shared/dialog' as *;
 
 .dialog-sm {
-  max-width: 400px;
+  max-width: 420px;
 }
 
 .dialog-body {
@@ -9,6 +9,24 @@
 
   p {
     margin: 0;
+    color: var(--text-muted);
+
+    strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+  }
+}
+
+.reassign-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 14px;
+
+  label {
+    font-size: 13px;
+    font-weight: 500;
     color: var(--text-muted);
   }
 }

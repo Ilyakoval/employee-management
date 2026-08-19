@@ -20,12 +20,7 @@ public sealed class EmployeesControllerTests : IDisposable
 
     public EmployeesControllerTests()
     {
-        _connection = new SqliteConnection("DataSource=:memory:");
-        _connection.Open();
-
-        _db = new AppDbContext(
-            new DbContextOptionsBuilder<AppDbContext>().UseSqlite(_connection).Options);
-        _db.Database.EnsureCreated();
+        (_connection, _db) = TestDb.Create();
 
         _db.Departments.AddRange(
             new Department { ID = 1, Name = "Finance" },
@@ -182,5 +177,51 @@ public sealed class EmployeesControllerTests : IDisposable
     public async Task Delete_MissingEmployee_ReturnsNotFound()
     {
         Assert.IsType<NotFoundObjectResult>(await _controller.Delete(99));
+    }
+
+    [Fact]
+    public async Task Delete_Manager_ReportsSubordinateCountInConflict()
+    {
+        var conflict = Assert.IsType<ConflictObjectResult>(await _controller.Delete(1));
+
+        var problem = Assert.IsType<ProblemDetails>(conflict.Value);
+        Assert.Equal(2, problem.Extensions["subordinateCount"]);
+    }
+
+    [Fact]
+    public async Task Delete_ManagerWithReassign_MovesSubordinatesAndDeletes()
+    {
+        var result = await _controller.Delete(1, reassignTo: "2");
+
+        Assert.IsType<NoContentResult>(result);
+        Assert.Null(await _db.Employees.AsNoTracking().FirstOrDefaultAsync(e => e.ID == 1));
+        Assert.Equal(2, (await _db.Employees.AsNoTracking().SingleAsync(e => e.ID == 3)).ManagerID);
+        // Bob (id 2) reported to Alice and became the new manager himself:
+        // he must end up top-level, not reporting to himself.
+        Assert.Null((await _db.Employees.AsNoTracking().SingleAsync(e => e.ID == 2)).ManagerID);
+    }
+
+    [Fact]
+    public async Task Delete_ManagerWithReassignNone_ClearsManager()
+    {
+        var result = await _controller.Delete(1, reassignTo: "none");
+
+        Assert.IsType<NoContentResult>(result);
+        Assert.Null((await _db.Employees.AsNoTracking().SingleAsync(e => e.ID == 2)).ManagerID);
+        Assert.Null((await _db.Employees.AsNoTracking().SingleAsync(e => e.ID == 3)).ManagerID);
+    }
+
+    [Fact]
+    public async Task Delete_ReassignToSelf_ReturnsBadRequest()
+    {
+        var bad = Assert.IsType<BadRequestObjectResult>(await _controller.Delete(1, reassignTo: "1"));
+        Assert.Contains("being deleted", Assert.IsType<ProblemDetails>(bad.Value).Title);
+        Assert.NotNull(await _db.Employees.FindAsync(1));
+    }
+
+    [Fact]
+    public async Task Delete_ReassignToMissingEmployee_ReturnsBadRequest()
+    {
+        Assert.IsType<BadRequestObjectResult>(await _controller.Delete(1, reassignTo: "99"));
     }
 }

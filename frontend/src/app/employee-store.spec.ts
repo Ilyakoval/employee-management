@@ -90,6 +90,26 @@ describe('EmployeeStore', () => {
     expect(store.employees().map(e => e.id)).toEqual([2]);
   });
 
+  it('delete with reassignment moves subordinates to the new manager locally', () => {
+    seed([
+      employee({ id: 1, firstName: 'Alice', lastName: 'Boss' }),
+      employee({ id: 2, firstName: 'Bob', lastName: 'Worker', managerId: 1, managerName: 'Alice Boss' }),
+      employee({ id: 3, firstName: 'Carol', lastName: 'Third', managerId: 1, managerName: 'Alice Boss' })
+    ]);
+
+    store.delete(1, 2).subscribe();
+    const req = http.expectOne(r => r.url === `${API}/employees/1`);
+    expect(req.request.params.get('reassignTo')).toBe('2');
+    req.flush(null);
+
+    const carol = store.employees().find(e => e.id === 3)!;
+    expect(carol.managerId).toBe(2);
+    expect(carol.managerName).toBe('Bob Worker');
+    // Bob became the manager himself — he must end up top-level.
+    const bob = store.employees().find(e => e.id === 2)!;
+    expect(bob.managerId).toBeNull();
+  });
+
   it('delete keeps state intact when the server refuses', () => {
     seed([employee({ id: 1 })]);
 

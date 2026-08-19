@@ -1,0 +1,49 @@
+<div class="overlay" (click)="closed.emit()">
+  <div class="dialog dialog-sm" role="alertdialog" aria-modal="true" appFocusTrap (click)="$event.stopPropagation()">
+    <header class="dialog-header">
+      <h2>Delete employee</h2>
+      <button type="button" class="icon-btn" aria-label="Close" (click)="closed.emit()">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </header>
+
+    <div class="dialog-body">
+      @if (subordinates().length > 0) {
+        <p>
+          <strong>{{ fullName() }}</strong> manages
+          <strong>{{ subordinates().length }}</strong>
+          {{ subordinates().length === 1 ? 'employee' : 'employees' }}.
+          Choose a new manager for them, then the employee can be deleted.
+        </p>
+        <div class="reassign-field">
+          <label>New manager for the team</label>
+          <app-select
+            placeholder="— No manager —"
+            selectAriaLabel="New manager"
+            [options]="reassignOptions()"
+            [ngModel]="reassignTo()"
+            (ngModelChange)="reassignTo.set($event)"
+          />
+        </div>
+      } @else {
+        <p>
+          Are you sure you want to delete <strong>{{ fullName() }}</strong>?
+          This action cannot be undone.
+        </p>
+      }
+
+      @if (error()) {
+        <div class="server-error" role="alert">{{ error() }}</div>
+      }
+    </div>
+
+    <footer class="dialog-footer dialog-footer-padded">
+      <button type="button" class="btn btn-ghost" (click)="closed.emit()">Cancel</button>
+      <button type="button" class="btn btn-danger" [disabled]="busy()" (click)="confirm()">
+        {{ busy() ? 'Deleting…' : (subordinates().length > 0 ? 'Reassign & delete' : 'Delete') }}
+      </button>
+    </footer>
+  </div>
+</div>
